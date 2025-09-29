@@ -1,6 +1,9 @@
 package utils
 
 import (
+	"strings"
+	"time"
+
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/niko-2609/tracker-expense/constants"
 	models "github.com/niko-2609/tracker-expense/models/auth"
@@ -17,6 +20,7 @@ func CreateJWTToken(userData models.UserCache) (string, error) {
 	// Populate the claims
 	claims["user_id"] = userData.ID
 	claims["user_email"] = userData.Email
+	claims["exp"] = time.Now().Add(time.Hour * 3).Unix()
 
 	// Sign the token with signing method defined above and our signing key
 	jwtToken, err := token.SignedString([]byte(constants.SIGNING_KEY))
@@ -38,4 +42,23 @@ func HashPassword(password string) (string, error) {
 func CompareHash(password, hashedPassword string) bool {
 	err := bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(password))
 	return err == nil
+}
+
+// Extract user name from password
+func ExtractUserName(email string) string {
+	parts := strings.Split(email, "@")
+	if len(parts) > 1 {
+		return beautifyName(parts[0])
+	}
+	return ""
+}
+
+func beautifyName(rawName string) string {
+	words := strings.Split(rawName, ".")
+	for i, word := range words {
+		if len(word) > 0 {
+			words[i] = strings.ToUpper(word[:1]) + strings.ToLower(word[1:])
+		}
+	}
+	return strings.Join(words, " ")
 }

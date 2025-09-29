@@ -23,7 +23,7 @@ func Login(c *fiber.Ctx) error {
 	decoder := json.NewDecoder(bytes.NewReader(c.Body()))
 	decoder.DisallowUnknownFields()
 	if err := decoder.Decode(&input); err != nil {
-		log.Error("Bad Request - Invalid Request")
+		log.Error("Bad Request - Invalid Credentials Object")
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"status":  "error",
 			"message": "Invalid Request",
@@ -61,7 +61,7 @@ func Login(c *fiber.Ctx) error {
 			log.Error("User not found in database")
 			return c.Status(fiber.StatusUnauthorized).JSON(apiModel.Response{
 				Status:  "error",
-				Message: "Unauthorized user, please try again after signing up",
+				Message: "Invalid username or password",
 				Data:    nil,
 			})
 		}
@@ -85,10 +85,10 @@ func Login(c *fiber.Ctx) error {
 
 	// Check password validity
 	if !utils.CompareHash(password, usercache.Password) {
-		log.Error("Verification failed for password hashes")
+		log.Error("Password hashes do not match")
 		return c.Status(fiber.StatusUnauthorized).JSON(apiModel.Response{
 			Status:  "error",
-			Message: "User not authorized, please try again ",
+			Message: "Invalid username or password",
 			Data:    nil,
 		})
 	}
