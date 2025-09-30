@@ -175,42 +175,45 @@ func UpdateDashboardMetrics(userID uint) error {
 		return err
 	}
 
-	// // B. Monthly Totals (for line chart)
-	// monthlyQuery := `
-	// WITH monthly AS (
-	//     SELECT
-	//         TO_CHAR(DATE_TRUNC('month', txn_date), 'YYYY-MM') AS month,
-	//         SUM(CASE WHEN txn_type='income' THEN amount ELSE -amount END) AS net
-	//     FROM transactions
-	//     WHERE user_id = ?
-	//     GROUP BY DATE_TRUNC('month', txn_date)
-	//     ORDER BY month
-	// )
-	// UPDATE user_dashboard_metrics
-	// SET monthly_totals = (SELECT jsonb_object_agg(month, net) FROM monthly)
-	// WHERE user_id = ?;
-	// `
-	// if err := db.Exec(monthlyQuery, userID, userID).Error; err != nil {
-	// 	return err
-	// }
+	// B. Monthly Totals (for line chart)
+	monthlyQuery := `
+	WITH monthly AS (
+	    SELECT
+	        TO_CHAR(DATE_TRUNC('month', txn_date), 'YYYY-MM') AS month,
+	        SUM(CASE WHEN txn_type='income' THEN amount ELSE -amount END) AS net
+	    FROM transactions
+	    WHERE user_id = ?
+	    GROUP BY DATE_TRUNC('month', txn_date)
+	    ORDER BY month
+	)
+	UPDATE user_dashboard_metrics
+	SET monthly_totals = (SELECT jsonb_object_agg(month, net) FROM monthly)
+	WHERE user_id = ?;
+	`
+	if err := database.DB.Exec(monthlyQuery, userID, userID).Error; err != nil {
+		return err
+	}
 
 	// // C. Top 5 Expense Categories (for pie chart)
-	// topCatQuery := `
-	// UPDATE user_dashboard_metrics
-	// SET top_expense_categories = (
-	//     SELECT jsonb_agg(jsonb_build_object('category', c.name, 'amount', SUM(t.amount)))
-	//     FROM transactions t
-	//     JOIN categories c ON t.category_id = c.id
-	//     WHERE t.user_id = ? AND t.txn_type='expense'
-	//     GROUP BY c.id, c.name
-	//     ORDER BY SUM(t.amount) DESC
-	//     LIMIT 5
-	// )
-	// WHERE user_id = ?;
-	// `
-	// if err := db.Exec(topCatQuery, userID, userID).Error; err != nil {
-	// 	return err
-	// }
+	topCatQuery := `
+	UPDATE user_dashboard_metrics
+	SET top_expense_categories = (
+    	SELECT jsonb_agg(jsonb_build_object('category', category, 'amount', amount))
+    		FROM (
+        	SELECT c.name AS category, SUM(t.amount) AS amount
+        	FROM transactions t
+        	JOIN categories c ON t.category_id = c.id
+        	WHERE t.user_id = ? AND t.txn_type = 'expense'
+        	GROUP BY c.id, c.name
+        	ORDER BY SUM(t.amount) DESC
+        	LIMIT 5
+    	) sub
+	)
+	WHERE user_id = ?;
+	`
+	if err := database.DB.Exec(topCatQuery, userID, userID).Error; err != nil {
+		return err
+	}
 
 	return nil
 }

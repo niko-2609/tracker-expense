@@ -1,11 +1,11 @@
 package utils
 
 import (
+	"os"
 	"strings"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
-	"github.com/niko-2609/tracker-expense/constants"
 	models "github.com/niko-2609/tracker-expense/models/auth"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -23,7 +23,7 @@ func CreateJWTToken(userData models.UserCache) (string, error) {
 	claims["exp"] = time.Now().Add(time.Hour * 3).Unix()
 
 	// Sign the token with signing method defined above and our signing key
-	jwtToken, err := token.SignedString([]byte(constants.SIGNING_KEY))
+	jwtToken, err := token.SignedString([]byte(os.Getenv("KEY")))
 	if err != nil {
 		return "", err
 	}
