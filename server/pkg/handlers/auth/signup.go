@@ -1,8 +1,6 @@
 package handlers
 
 import (
-	"bytes"
-	"encoding/json"
 	"errors"
 
 	"github.com/gofiber/fiber/v2"
@@ -18,24 +16,13 @@ import (
 func SignUp(c *fiber.Ctx) error {
 	input := new(authmodel.Credentials)
 
-	// Verify raw request
-	decoder := json.NewDecoder(bytes.NewReader(c.Body()))
-	decoder.DisallowUnknownFields()
-	if err := decoder.Decode(&input); err != nil {
-		log.Error("Bad Request - Invalid Credentials Object")
+	// Validate incoming request
+	if errs, err := validation.ValidateRequest(c, input); err != nil {
+		log.Error(err.Error())
+		errMsg := validation.CheckErrors(c, errs, err)
 		return c.Status(fiber.StatusBadRequest).JSON(apiModel.Response{
 			Status:  "error",
-			Message: "Invalid Request",
-			Data:    nil,
-		})
-	}
-
-	// Verify request against the defined model
-	if err := validation.Validate.Struct(input); err != nil {
-		log.Error("Bad Request - Request validation failed")
-		return c.Status(fiber.StatusBadRequest).JSON(apiModel.Response{
-			Status:  "error",
-			Message: "Failed request validation",
+			Message: errMsg,
 			Data:    nil,
 		})
 	}

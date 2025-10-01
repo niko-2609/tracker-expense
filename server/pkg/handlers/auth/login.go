@@ -1,8 +1,6 @@
 package handlers
 
 import (
-	"bytes"
-	"encoding/json"
 	"errors"
 
 	"github.com/gofiber/fiber/v2"
@@ -19,29 +17,16 @@ func Login(c *fiber.Ctx) error {
 	input := new(authModel.Credentials)
 	var usercache authModel.UserCache
 
-	// Check raw incoming request
-	decoder := json.NewDecoder(bytes.NewReader(c.Body()))
-	decoder.DisallowUnknownFields()
-	if err := decoder.Decode(&input); err != nil {
-		log.Error("Bad Request - Invalid Credentials Object")
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"status":  "error",
-			"message": "Invalid Request",
-			"data":    nil,
-		})
-	}
-
-	// Validate request using validator
-	if err := validation.Validate.Struct(input); err != nil {
-		log.Errorf("Bad Request - Request validation failed")
+	// Validate incoming request
+	if errs, err := validation.ValidateRequest(c, input); err != nil {
+		log.Error(err.Error())
+		errMsg := validation.CheckErrors(c, errs, err)
 		return c.Status(fiber.StatusBadRequest).JSON(apiModel.Response{
 			Status:  "error",
-			Message: "Failed request validation",
+			Message: errMsg,
 			Data:    nil,
 		})
 	}
-
-	// Process request
 
 	// Retrive email and password from request
 	email := input.Email
