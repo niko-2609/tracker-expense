@@ -1,10 +1,12 @@
 package utils
 
 import (
+	"fmt"
 	"os"
 	"strings"
 	"time"
 
+	"github.com/gofiber/fiber/v2"
 	"github.com/golang-jwt/jwt/v5"
 	models "github.com/niko-2609/tracker-expense/models/auth"
 	"golang.org/x/crypto/bcrypt"
@@ -42,6 +44,23 @@ func HashPassword(password string) (string, error) {
 func CompareHash(password, hashedPassword string) bool {
 	err := bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(password))
 	return err == nil
+}
+
+func GetUserId(c *fiber.Ctx) (uint, error) {
+	//Fiber stores JWT claims in c.Locals("user"). Get the parsed token from context
+	user := c.Locals("user").(*jwt.Token)
+
+	// Get claims section from the token
+	claims := user.Claims.(jwt.MapClaims)
+
+	// Get the `user_id` from token claims
+	userID, ok := claims["user_id"].(float64) // JWT is decoded as float64
+	if !ok {
+		return 0, fmt.Errorf("valid user not found in request")
+	}
+
+	// Return `user_id``
+	return uint(userID), nil
 }
 
 // Extract user name from password

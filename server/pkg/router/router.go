@@ -3,6 +3,7 @@ package router
 import (
 	"github.com/gofiber/fiber/v2"
 	handlers "github.com/niko-2609/tracker-expense/pkg/handlers/auth"
+	transactionHandlers "github.com/niko-2609/tracker-expense/pkg/handlers/transactions"
 	middleware "github.com/niko-2609/tracker-expense/pkg/middleware/auth"
 )
 
@@ -21,4 +22,8 @@ func SetupRoutes(app *fiber.App) {
 			"message": "middleware authentication is working",
 		})
 	})
+
+	transaction := api.Group("/transaction")
+	transaction.Get("", middleware.Protected(), transactionHandlers.GetTransactionsHandler)
+	transaction.Post("add", middleware.Protected(), transactionHandlers.AddTransactionHandler)
 }

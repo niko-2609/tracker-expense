@@ -20,6 +20,16 @@ type Transaction struct {
 	Description string    `json:"description"`
 }
 
+type TransactionRequest struct {
+	Name        string    `json:"name" validate:"required,min=2,max=100"`
+	Amount      float64   `json:"amount" validate:"required,gt=0"`
+	TxnType     string    `json:"txn_type" validate:"required,oneof=income expense"`
+	Frequency   string    `json:"frequency" validate:"required,oneof=daily weekly monthly quarterly yearly"`
+	CategoryID  uint      `json:"category_id" validate:"required,gt=0"`
+	TxnDate     time.Time `json:"txn_date" validate:"required"`
+	Description string    `json:"description" validate:"max=255"`
+}
+
 // Category object
 type Category struct {
 	gorm.Model

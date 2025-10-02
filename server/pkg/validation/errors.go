@@ -2,19 +2,23 @@ package validation
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/gofiber/fiber/v2"
 )
 
 func CheckErrors(c *fiber.Ctx, errs []ValidationError, err error) string {
 	var errorMsg string
-	if errs != nil {
-		if len(errs) == 1 {
-			errorMsg = fmt.Sprintf("Invalid %s: %s", errs[0].Field, errs[0].Message)
-		} else {
-			errorMsg = "Invalid request: email or password is not valid."
+	if errs != nil && len(errs) > 0 {
+		messages := make([]string, 0, len(errs))
+		for _, e := range errs {
+			messages = append(messages, fmt.Sprintf("%s: %s", e.Field, e.Message))
 		}
-	} else {
+		errorMsg = "Invalid request - " + strings.Join(messages, "; ")
+		return errorMsg
+	}
+
+	if err != nil {
 		errorMsg = fmt.Sprintf("Invalid request: %s", err.Error())
 	}
 	return errorMsg
