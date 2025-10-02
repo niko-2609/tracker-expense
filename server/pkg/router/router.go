@@ -26,4 +26,6 @@ func SetupRoutes(app *fiber.App) {
 	transaction := api.Group("/transaction")
 	transaction.Get("", middleware.Protected(), transactionHandlers.GetTransactionsHandler)
 	transaction.Post("add", middleware.Protected(), transactionHandlers.AddTransactionHandler)
+	transaction.Patch("update/:id", middleware.Protected(), transactionHandlers.UpdateTransactionHandler)
+	transaction.Delete("remove/:id", middleware.Protected(), transactionHandlers.DeleteTransactionHandler)
 }

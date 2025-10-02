@@ -20,14 +20,22 @@ type Transaction struct {
 	Description string    `json:"description"`
 }
 
-type TransactionRequest struct {
-	Name        string    `json:"name" validate:"required,min=2,max=100"`
-	Amount      float64   `json:"amount" validate:"required,gt=0"`
-	TxnType     string    `json:"txn_type" validate:"required,oneof=income expense"`
-	Frequency   string    `json:"frequency" validate:"required,oneof=daily weekly monthly quarterly yearly"`
-	CategoryID  uint      `json:"category_id" validate:"required,gt=0"`
-	TxnDate     time.Time `json:"txn_date" validate:"required"`
-	Description string    `json:"description" validate:"max=255"`
+type AddTransactionRequest struct {
+	Name        string  `json:"name" validate:"required,min=2,max=100"`
+	Amount      float64 `json:"amount" validate:"required,gt=0"`
+	TxnType     string  `json:"txn_type" validate:"required,oneof=income expense"`
+	Frequency   string  `json:"frequency" validate:"required,oneof=daily weekly monthly quarterly yearly"`
+	CategoryID  uint    `json:"category_id" validate:"required,gt=0"`
+	Description string  `json:"description" validate:"max=255"`
+}
+
+type UpdateTransactionRequest struct {
+	Name        *string  `json:"name,omitempty" validate:"omitempty,min=2,max=100"`
+	Amount      *float64 `json:"amount,omitempty" validate:"omitempty,gt=0"`
+	TxnType     *string  `json:"txn_type,omitempty" validate:"omitempty,oneof=income expense"`
+	Frequency   *string  `json:"frequency,omitempty" validate:"omitempty,oneof=daily weekly monthly quarterly yearly"`
+	CategoryID  *uint    `json:"category_id,omitempty" validate:"omitempty,gt=0"`
+	Description *string  `json:"description,omitempty" validate:"omitempty,max=255"`
 }
 
 // Category object

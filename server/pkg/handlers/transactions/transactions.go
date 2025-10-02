@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/log"
@@ -61,10 +62,10 @@ func AddTransactionHandler(c *fiber.Ctx) error {
 			Data:    nil,
 		})
 	}
-	transactionReq := new(transactionModels.TransactionRequest)
+	addTransactionReq := new(transactionModels.AddTransactionRequest)
 
 	// Validate incoming request
-	if errs, err := validation.ValidateRequest(c, transactionReq); err != nil {
+	if errs, err := validation.ValidateRequest(c, addTransactionReq); err != nil {
 		log.Error(err.Error())
 		errMsg := validation.CheckErrors(c, errs, err)
 		return c.Status(fiber.StatusBadRequest).JSON(apiModel.Response{
@@ -77,13 +78,13 @@ func AddTransactionHandler(c *fiber.Ctx) error {
 	// Create a new transaction object
 	transaction := &transactionModels.Transaction{
 		UserID:      userID,
-		Name:        transactionReq.Name,
-		Frequency:   transactionReq.Frequency,
-		Amount:      transactionReq.Amount,
-		CategoryID:  transactionReq.CategoryID,
-		TxnType:     transactionReq.TxnType,
-		TxnDate:     transactionReq.TxnDate,
-		Description: transactionReq.Description,
+		Name:        addTransactionReq.Name,
+		Frequency:   addTransactionReq.Frequency,
+		Amount:      addTransactionReq.Amount,
+		CategoryID:  addTransactionReq.CategoryID,
+		TxnType:     addTransactionReq.TxnType,
+		TxnDate:     time.Now(),
+		Description: addTransactionReq.Description,
 	}
 
 	// Add transaction to database
@@ -102,7 +103,126 @@ func AddTransactionHandler(c *fiber.Ctx) error {
 	return c.Status(fiber.StatusAccepted).JSON(apiModel.Response{
 		Status:  "success",
 		Message: "Transaction added successfully",
-		Data:    transactionReq,
+		Data:    addTransactionReq,
 	})
 
+}
+
+func UpdateTransactionHandler(c *fiber.Ctx) error {
+	userID, err := utils.GetUserId(c)
+	if err != nil {
+		return c.Status(fiber.StatusUnauthorized).JSON(apiModel.Response{
+			Status:  "error",
+			Message: "User id is required for the transaction",
+			Data:    nil,
+		})
+	}
+
+	transactionID := c.Params("id")
+	if transactionID == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(apiModel.Response{
+			Status:  "error",
+			Message: "Cannot delete transaction: invalid item request",
+			Data:    nil,
+		})
+	}
+
+	patchTransactionReq := new(transactionModels.UpdateTransactionRequest)
+
+	// Validate incoming request
+	if errs, err := validation.ValidateRequest(c, patchTransactionReq); err != nil {
+		log.Error(err.Error())
+		errMsg := validation.CheckErrors(c, errs, err)
+		return c.Status(fiber.StatusBadRequest).JSON(apiModel.Response{
+			Status:  "error",
+			Message: errMsg,
+			Data:    nil,
+		})
+	}
+
+	patchMap := buildPatchMap(patchTransactionReq)
+	if len(patchMap) == 0 {
+		log.Error("No items in PATCH request")
+		return c.Status(fiber.StatusBadRequest).JSON(apiModel.Response{
+			Status:  "error",
+			Message: "Atleast 1 items is required for PATCH",
+			Data:    nil,
+		})
+	}
+
+	tx := database.DB.Model(&transactionModels.Transaction{}).Where("id = ? AND user_id = ?", transactionID, userID).Updates(patchMap)
+	if tx.Error != nil {
+		log.Error(tx.Error.Error())
+		return c.Status(fiber.StatusInternalServerError).JSON(apiModel.Response{
+			Status:  "error",
+			Message: fmt.Sprintf("Cannot update transaction: %s", tx.Error.Error()),
+			Data:    nil,
+		})
+	}
+
+	return c.Status(fiber.StatusOK).JSON(apiModel.Response{
+		Status:  "success",
+		Message: "Transaction updated",
+		Data:    patchMap,
+	})
+}
+
+func buildPatchMap(patchReq *transactionModels.UpdateTransactionRequest) map[string]any {
+	patchMap := make(map[string]any)
+	if patchReq.Name != nil {
+		patchMap["name"] = patchReq.Name
+	}
+	if patchReq.Amount != nil {
+		patchMap["amount"] = patchReq.Amount
+	}
+	if patchReq.Frequency != nil {
+		patchMap["frequency"] = patchReq.Frequency
+	}
+
+	if patchReq.TxnType != nil {
+		patchMap["txn_type"] = patchReq.TxnType
+	}
+	if patchReq.CategoryID != nil {
+		patchMap["category_id"] = patchReq.CategoryID
+	}
+	if patchReq.Description != nil {
+		patchMap["description"] = patchReq.Description
+	}
+
+	return patchMap
+}
+
+func DeleteTransactionHandler(c *fiber.Ctx) error {
+	userID, err := utils.GetUserId(c)
+	if err != nil {
+		return c.Status(fiber.StatusUnauthorized).JSON(apiModel.Response{
+			Status:  "error",
+			Message: "User id is required for the transaction",
+			Data:    nil,
+		})
+	}
+
+	transactionID := c.Params("id")
+	if transactionID == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(apiModel.Response{
+			Status:  "error",
+			Message: "Cannot delete transaction: invalid item request",
+			Data:    nil,
+		})
+	}
+
+	deleteTX := database.DB.Delete(&transactionModels.Transaction{}, userID, transactionID)
+	if deleteTX.Error != nil {
+		log.Error(deleteTX.Error.Error())
+		return c.Status(fiber.StatusInternalServerError).JSON(apiModel.Response{
+			Status:  "error",
+			Message: fmt.Sprintf("Cannot delete transaction: %s", deleteTX.Error.Error()),
+			Data:    nil,
+		})
+	}
+
+	// Update dashboard metrics
+	utils.UpdateDashboardMetrics(userID)
+
+	return c.SendStatus(fiber.StatusOK)
 }
